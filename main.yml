@@ -17,16 +17,10 @@ jobs:
         run: |
           set -e
           ZIP_FILE="$(find . -maxdepth 1 -type f -iname '*.zip' -print -quit)"
-          if [ -z "$ZIP_FILE" ]; then
-            echo "ERROR: Android project ZIP not found"
-            exit 1
-          fi
-
+          test -n "$ZIP_FILE"
           mkdir -p "$RUNNER_TEMP/prda-app"
           unzip -oq "$ZIP_FILE" -d "$RUNNER_TEMP/prda-app"
-
           test -f "$RUNNER_TEMP/prda-app/settings.gradle"
-          test -f "$RUNNER_TEMP/prda-app/app/build.gradle"
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -38,7 +32,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "SDK: $ANDROID_HOME"
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           yes | "$SDKMANAGER" --licenses > /dev/null || true
           "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
@@ -48,12 +42,8 @@ jobs:
         with:
           gradle-version: '8.10.2'
 
-      - name: Build APK
-        shell: bash
-        run: |
-          gradle --no-daemon \
-            -p "$RUNNER_TEMP/prda-app" \
-            :app:assembleDebug
+      - name: Build Debug APK
+        run: gradle --no-daemon -p "$RUNNER_TEMP/prda-app" :app:assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
