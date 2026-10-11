@@ -34,6 +34,14 @@ jobs:
         with:
           gradle-version: '8.10.2'
 
+      - name: Update Android compatibility
+        shell: bash
+        run: |
+          set -e
+          BUILD_FILE="$RUNNER_TEMP/prda-app/app/build.gradle"
+          sed -i 's/targetSdk 28/targetSdk 35/' "$BUILD_FILE"
+          grep -q 'targetSdk 35' "$BUILD_FILE"
+
       - name: Build Debug APK
         shell: bash
         run: |
