@@ -1,3 +1,4 @@
+
 name: PRDA ST Android APK
 
 on:
@@ -16,10 +17,7 @@ jobs:
         run: |
           set -e
           ZIP_FILE="$(find . -maxdepth 1 -type f -iname '*.zip' -print -quit)"
-          if [ -z "$ZIP_FILE" ]; then
-            echo "Android ZIP not found"
-            exit 1
-          fi
+          test -n "$ZIP_FILE"
           mkdir -p "$RUNNER_TEMP/prda-app"
           unzip -oq "$ZIP_FILE" -d "$RUNNER_TEMP/prda-app"
           test -f "$RUNNER_TEMP/prda-app/settings.gradle"
@@ -31,17 +29,15 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
 
-      - name: Build APK
+      - name: Build Debug APK
         shell: bash
-        run: gradle --no-daemon -p "$RUNNER_TEMP/prda-app" :app:assembleDebug
+        run: |
+          gradle --no-daemon -p "$RUNNER_TEMP/prda-app" :app:assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
