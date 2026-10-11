@@ -1,0 +1,55 @@
+name: PRDA ST Android APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/main.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract Android project ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP_FILE="$(find . -maxdepth 1 -type f -iname '*.zip' -print -quit)"
+          if [ -z "$ZIP_FILE" ]; then
+            echo 'ERROR: No Android project ZIP at repository root'
+            ls -la
+            exit 1
+          fi
+          echo "Using $ZIP_FILE"
+          unzip -oq "$ZIP_FILE" -d "$RUNNER_TEMP/prda-app"
+          test -f "$RUNNER_TEMP/prda-app/settings.gradle"
+          test -f "$RUNNER_TEMP/prda-app/app/build.gradle"
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Build installable APK
+        shell: bash
+        run: gradle --no-daemon -p "$RUNNER_TEMP/prda-app" :app:assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PRDA_ST_Android_APK
+          path: ${{ runner.temp }}/prda-app/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
