@@ -1,0 +1,61 @@
+name: PRDA ST V2 Splash APK Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract the latest V2 project only
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP_FILE="PRDA_ST_V2_2s_Splash.zip"
+          test -s "$ZIP_FILE"
+          mkdir -p "$RUNNER_TEMP/prda-app"
+          unzip -oq "$ZIP_FILE" -d "$RUNNER_TEMP/prda-app"
+          test -f "$RUNNER_TEMP/prda-app/settings.gradle"
+          test -f "$RUNNER_TEMP/prda-app/app/build.gradle"
+          test -f "$RUNNER_TEMP/prda-app/app/src/main/java/kr/co/seotech/prdast/MainActivity.java"
+          test -f "$RUNNER_TEMP/prda-app/app/src/main/res/drawable-nodpi/splash_logo.png"
+          echo "Project selected: $ZIP_FILE"
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Update Android target SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUILD_FILE="$RUNNER_TEMP/prda-app/app/build.gradle"
+          sed -i -E 's/targetSdk[[:space:]]+28/targetSdk 35/' "$BUILD_FILE"
+          grep -Eq 'targetSdk[[:space:]]+35' "$BUILD_FILE"
+
+      - name: Build test APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon -p "$RUNNER_TEMP/prda-app" :app:assembleDebug
+          ls -lh "$RUNNER_TEMP/prda-app/app/build/outputs/apk/debug/app-debug.apk"
+
+      - name: Save test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PRDA_ST_V2_SPLASH_TEST_APK
+          path: ${{ runner.temp }}/prda-app/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
